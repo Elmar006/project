@@ -7,11 +7,13 @@ import (
 
 	"github.com/Elmar006/project/internal/api"
 	"github.com/Elmar006/project/internal/db"
+	"github.com/Elmar006/project/internal/logger"
 	"github.com/joho/godotenv"
 )
 
 func main() {
 	web := "../web"
+	logger.Init()
 
 	if err := godotenv.Load("../.env"); err != nil {
 		log.Printf("Warning: Could not load .env file %v", err)

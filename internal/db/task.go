@@ -2,10 +2,13 @@ package db
 
 import (
 	"errors"
+	"time"
+
+	logger "github.com/Elmar006/project/internal/logger"
 )
 
 type Task struct {
-	ID      string `json:"id"`
+	ID      int64  `json:"id,string"`
 	Date    string `json:"date"`
 	Title   string `json:"title"`
 	Comment string `json:"comment"`
@@ -32,4 +35,125 @@ func AddTask(task *Task) (int64, error) {
 	}
 
 	return id, nil
+}
+
+func GetTasks(limit int) ([]*Task, error) {
+	if limit > 50 {
+		logger.L().Info("The limit cannot exceed 50 tasks.")
+		limit = 50
+	}
+
+	rows, err := DB.Query(
+		`SELECT id, date, title, comment, repeat FROM scheduler ORDER BY date LIMIT ?`,
+		limit,
+	)
+	if err != nil {
+		logger.L().Errorf("Failed: %v", err)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var tasks []*Task
+	for rows.Next() {
+		task := &Task{}
+
+		if err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat); err != nil {
+			logger.L().Errorf("Failed: %v", err)
+			return nil, err
+		}
+		tasks = append(tasks, task)
+	}
+	if rows.Err() != nil {
+		logger.L().Error("Scan error")
+		return nil, rows.Err()
+	}
+
+	return tasks, nil
+}
+
+func SearchTask(search string, limit int) ([]*Task, error) {
+	if limit > 50 {
+		logger.L().Info("The limit cannot be more than 50")
+		limit = 50
+	}
+	if t, err := time.Parse("02.01.2006", search); err == nil {
+		date := t.Format("20060102")
+		tasks, err := searchDate(date, limit)
+		if err != nil {
+			logger.L().Errorf("Date search error: %v", err)
+		}
+
+		return tasks, nil
+	} else {
+		tasks, err := searchTitleAndComment(search, limit)
+		if err != nil {
+			logger.L().Errorf("Error search title/comment %v", err)
+			return nil, err
+		}
+
+		return tasks, nil
+	}
+}
+
+func searchDate(date string, limit int) ([]*Task, error) {
+	rows, err := DB.Query(
+		`SELECT * FROM scheduler WHERE date = ? LIMIT ?`,
+		date, limit,
+	)
+	if err != nil {
+		logger.L().Errorf("date search error in DB: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*Task
+	for rows.Next() {
+		var task Task
+		if err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat); err != nil {
+			logger.L().Errorf("Scan error: %v", err)
+			return nil, err
+		}
+
+		tasks = append(tasks, &task)
+	}
+
+	if rows.Err() != nil {
+		logger.L().Error(err)
+		return nil, err
+	}
+
+	return tasks, nil
+}
+
+func searchTitleAndComment(search string, limit int) ([]*Task, error) {
+	parseSearch := "%" + search + "%"
+	rows, err := DB.Query(
+		`SELECT * FROM scheduler WHERE title LIKE ? OR comment LIKE ? ORDER BY date LIMIT ?`,
+		parseSearch, parseSearch, limit,
+	)
+	if err != nil {
+		logger.L().Errorf("Comment/Title search error in DB: %v", err)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var tasks []*Task
+	for rows.Next() {
+		var task Task
+		if err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat); err != nil {
+			logger.L().Errorf("Scan error: %v", err)
+			return nil, err
+		}
+
+		tasks = append(tasks, &task)
+	}
+
+	if rows.Err() != nil {
+		logger.L().Error(err)
+		return nil, err
+	}
+
+	return tasks, nil
 }

@@ -2,9 +2,9 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 
+	"github.com/Elmar006/project/internal/logger"
 	_ "modernc.org/sqlite"
 )
 
@@ -28,17 +28,20 @@ func Init(dbFile string) error {
 
 	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
-		return fmt.Errorf("Ошибка при открытии БД: %v", err)
+		logger.L().Errorf("Ошибка при открытии БД: %v", err)
+		return err
 	}
 	if err := db.Ping(); err != nil {
-		return fmt.Errorf("Не удалось подключится к БД: %v", err)
+		logger.L().Errorf("Не удалось подключится к БД: %v", err)
+		return err
 	}
 	if instal == true {
 		_, err := db.Exec(schema)
 		if err != nil {
-			return fmt.Errorf("Ошибка инициализации БВ: %v", err)
+			logger.L().Errorf("Ошибка инициализации БД: %v", err)
+			return err
 		}
-		fmt.Println("БД созданна")
+		logger.L().Info("БД созданна")
 	}
 
 	DB = db
