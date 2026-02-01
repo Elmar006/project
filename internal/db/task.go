@@ -2,13 +2,14 @@ package db
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	logger "github.com/Elmar006/project/internal/logger"
 )
 
 type Task struct {
-	ID      int64  `json:"id,string"`
+	ID      int    `json:"id,string"`
 	Date    string `json:"date"`
 	Title   string `json:"title"`
 	Comment string `json:"comment"`
@@ -156,4 +157,40 @@ func searchTitleAndComment(search string, limit int) ([]*Task, error) {
 	}
 
 	return tasks, nil
+}
+
+func GetTask(id int) (*Task, error) {
+	task := &Task{}
+	err := DB.QueryRow(
+		`SELECT id, date, title, comment, repeat FROM scheduler WHERE id = ?`,
+		id,
+	).Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
+	if err != nil {
+		logger.L().Error(err)
+		return nil, err
+	}
+
+	return task, nil
+}
+
+func UpdateTask(task *Task) error {
+	query := `UPDATE scheduler SET date = ?, title = ?, comment = ?, repeat = ? WHERE id = ?`
+	res, err := DB.Exec(query, task.Date, task.Title, task.Comment, task.Repeat, task.ID)
+	if err != nil {
+		logger.L().Errorf("DB Exec error: %v", err)
+		return err
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil {
+		logger.L().Error(err)
+		return err
+	}
+
+	if count == 0 {
+		logger.L().Errorf("Incorrect id for updating task: ID=%d not found", task.ID)
+		return fmt.Errorf("Failed: count = 0")
+	}
+
+	return nil
 }

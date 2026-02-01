@@ -7,8 +7,26 @@ import (
 
 func Init() {
 	http.HandleFunc("/api/nextdate", nextDateHandler)
-	http.HandleFunc("/api/task", addTaskHandler)
+	http.HandleFunc("/api/task", taskHandler)
 	http.HandleFunc("/api/tasks", tasksHandler)
+}
+
+func taskHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		addTaskHandler(w, r)
+
+	case http.MethodGet:
+		getTaskByIDHandler(w, r)
+	case http.MethodPut:
+		updateTaskHandler(w, r)
+
+	/*case http.MethodDelete:
+	deleteTaskHandler(w, r)
+	*/
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func nextDateHandler(w http.ResponseWriter, r *http.Request) {

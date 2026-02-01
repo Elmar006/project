@@ -3,6 +3,9 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/Elmar006/project/internal/db"
 	"github.com/Elmar006/project/internal/logger"
@@ -50,4 +53,94 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(resp)
 	}
 
+}
+
+func getTaskByIDHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		logger.L().Errorf("Error: couldn't convert string to integer: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	taskID, err := db.GetTask(id)
+	if err != nil {
+		logger.L().Errorf("Error: couldn't convert string to integer: %v", err)
+		writeError(w, http.StatusBadRequest, "Invalid task ID")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(taskID)
+}
+
+func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		writeError(w, http.StatusBadRequest, "Task ID required")
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid task ID")
+		return
+	}
+	var task db.Task
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid JSON format")
+		return
+	}
+	defer r.Body.Close()
+
+	if strings.Contains(task.Date, ".") {
+		t, err := time.Parse("02.01.2006", task.Date)
+		if err == nil {
+			task.Date = t.Format("20060102")
+		}
+	}
+
+	task.ID = id
+
+	if task.Title == "" {
+		writeError(w, http.StatusBadRequest, "The 'Title' field cannot be empty")
+		return
+	}
+	if task.Date == "" {
+		task.Date = time.Now().Format("20060102")
+	}
+	if _, err := time.Parse("20060102", task.Date); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid date format")
+		return
+	}
+
+	now := time.Now()
+	t, _ := time.Parse("20060102", task.Date)
+	nowNorm := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	tNorm := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+
+	if tNorm.Before(nowNorm) {
+		if task.Repeat != "" {
+			next, err := NextDate(now, task.Date, task.Repeat)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+			task.Date = next
+		} else {
+			task.Date = now.Format("20060102")
+		}
+	}
+
+	err = db.UpdateTask(&task)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Database error: "+err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{})
 }
