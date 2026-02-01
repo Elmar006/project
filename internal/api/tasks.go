@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Elmar006/project/internal/db"
@@ -77,17 +76,6 @@ func getTaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
-		writeError(w, http.StatusBadRequest, "Task ID required")
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid task ID")
-		return
-	}
 	var task db.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid JSON format")
@@ -95,15 +83,10 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if strings.Contains(task.Date, ".") {
-		t, err := time.Parse("02.01.2006", task.Date)
-		if err == nil {
-			task.Date = t.Format("20060102")
-		}
+	if task.ID == 0 {
+		writeError(w, http.StatusBadRequest, "Task ID required")
+		return
 	}
-
-	task.ID = id
-
 	if task.Title == "" {
 		writeError(w, http.StatusBadRequest, "The 'Title' field cannot be empty")
 		return
@@ -134,9 +117,89 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = db.UpdateTask(&task)
+	err := db.UpdateTask(&task)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Database error: "+err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{})
+}
+
+func doneTaskHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		writeError(w, http.StatusBadRequest, "Task ID required")
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		logger.L().Errorf("Error: couldn't convert string to integer: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	task, err := db.GetTask(id)
+	if err != nil {
+		logger.L().Errorf("Error: couldn't convert string to integer: %v", err)
+		writeError(w, http.StatusBadRequest, "Invalid task ID")
+		return
+	}
+
+	if task.Repeat == "" {
+		err = db.DeleteTask(id)
+		if err != nil {
+			logger.L().Errorf("Failed to delete task: %v", err)
+			writeError(w, http.StatusInternalServerError, "Failed to delete task::"+err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{})
+		return
+	}
+	now := time.Now()
+	next, err := NextDate(now, task.Date, task.Repeat)
+	if err != nil {
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+
+	task.Date = next
+	err = db.UpdateTask(task)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Database error: "+err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{})
+}
+
+func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		writeError(w, http.StatusBadRequest, "Task ID required")
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		logger.L().Errorf("Error: couldn't convert string to integer: %v", err)
+		writeError(w, http.StatusBadRequest, "Invalid task ID format")
+		return
+	}
+
+	err = db.DeleteTask(id)
+	if err != nil {
+		logger.L().Errorf("Failed to delete task: %v", err)
+		writeError(w, http.StatusInternalServerError, "Failed to delete task::"+err.Error())
 		return
 	}
 

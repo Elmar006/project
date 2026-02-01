@@ -194,3 +194,13 @@ func UpdateTask(task *Task) error {
 
 	return nil
 }
+
+func DeleteTask(id int) error {
+	query := `DELETE FROM scheduler WHERE id = ?`
+	_, err := DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
