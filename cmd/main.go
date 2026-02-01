@@ -34,7 +34,7 @@ func main() {
 
 	api.Init()
 	http.Handle("/", http.FileServer(http.Dir(web)))
-	log.Printf("Starting server on http://localhost:%s", port)
+	logger.L().Infof("Starting server on http://localhost:%s", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal(err)
 	}
