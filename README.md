@@ -70,15 +70,15 @@
    go test ./tests
    ```
 7. Запуск через Docker:
-    1) Соберите исполняемый файл:
+   - Соберите исполняемый файл:
     ``` 
         go build -o scheduler ./cmd 
     ```
-    2) Соберите Docker образ:
+   - Соберите Docker образ:
     ```
         docker build -t scheduler-app .
     ```
-    3) Запуск контейнера:
+   - Запуск контейнера:
     ```
         docker run scheduler
     ```
