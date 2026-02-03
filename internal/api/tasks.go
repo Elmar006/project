@@ -59,7 +59,7 @@ func getTaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		logger.L().Errorf("Error: couldn't convert string to integer: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "Error: couldn't convert string to integer")
 		return
 	}
 
