@@ -2,13 +2,17 @@ package api
 
 import (
 	"net/http"
-	"os"
 )
+
+var todoPassword string
+
+func PasswordCheck(password string) {
+	todoPassword = password
+}
 
 func auth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		pass := os.Getenv("TODO_PASSWORD")
-		if len(pass) > 0 {
+		if len(todoPassword) > 0 {
 			var jwt string
 
 			cookie, err := r.Cookie("token")
@@ -19,7 +23,7 @@ func auth(next http.HandlerFunc) http.HandlerFunc {
 			var valid bool
 
 			if jwt != "" {
-				valid = validateToken(jwt, pass)
+				valid = validateToken(jwt, todoPassword)
 			}
 			if !valid {
 				http.Error(w, "Authentication required", http.StatusUnauthorized)

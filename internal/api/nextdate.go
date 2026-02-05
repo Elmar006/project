@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Elmar006/project/internal/db"
 )
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
@@ -12,7 +14,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		return "", errors.New("Repeat rule is empty")
 	}
 
-	layout := "20060102"
+	layout := db.TimeDateFormat
 	start, err := time.ParseInLocation(layout, dstart, now.Location())
 	if err != nil {
 		return "", errors.New("Invalid start date format")
@@ -65,7 +67,7 @@ func nextDateDays(now, start time.Time, parts []string) (string, error) {
 		current = current.AddDate(0, 0, days)
 	}
 
-	return current.Format("20060102"), nil
+	return current.Format(db.TimeDateFormat), nil
 }
 
 func nextDateYears(now, start time.Time) (string, error) {
@@ -100,7 +102,7 @@ func nextDateYears(now, start time.Time) (string, error) {
 		current = addOneYear(current)
 	}
 
-	return current.Format("20060102"), nil
+	return current.Format(db.TimeDateFormat), nil
 }
 
 func nextDateWeekdays(now, start time.Time, parts []string) (string, error) {
@@ -140,13 +142,13 @@ func nextDateWeekdays(now, start time.Time, parts []string) (string, error) {
 	nowNorm := neutralTime(now)
 
 	if current.After(now) && weekdays[current.Weekday()] {
-		return current.Format("20060102"), nil
+		return current.Format(db.TimeDateFormat), nil
 	}
 
 	current = current.AddDate(0, 0, 1)
 	for {
 		if weekdays[current.Weekday()] && current.After(nowNorm) {
-			return current.Format("20060102"), nil
+			return current.Format(db.TimeDateFormat), nil
 		}
 		current = current.AddDate(0, 0, 1)
 	}
@@ -239,14 +241,14 @@ func nextDateMonths(now, start time.Time, parts []string) (string, error) {
 	nowNorm := neutralTime(now)
 
 	if current.After(nowNorm) && matchesRule(current) {
-		return current.Format("20060102"), nil
+		return current.Format(db.TimeDateFormat), nil
 	}
 
 	current = current.AddDate(0, 0, 1)
 
 	for {
 		if matchesRule(current) && current.After(nowNorm) {
-			return current.Format("20060102"), nil
+			return current.Format(db.TimeDateFormat), nil
 		}
 		current = current.AddDate(0, 0, 1)
 	}

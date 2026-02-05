@@ -8,6 +8,9 @@ import (
 	logger "github.com/Elmar006/project/internal/logger"
 )
 
+const LimitCount = 50
+const TimeDateFormat = "20060102"
+
 type Task struct {
 	ID      int    `json:"id,string"`
 	Date    string `json:"date"`
@@ -39,9 +42,9 @@ func AddTask(task *Task) (int64, error) {
 }
 
 func GetTasks(limit int) ([]*Task, error) {
-	if limit > 50 {
+	if limit > LimitCount {
 		logger.L().Info("The limit cannot exceed 50 tasks.")
-		limit = 50
+		limit = LimitCount
 	}
 
 	rows, err := DB.Query(
@@ -74,12 +77,12 @@ func GetTasks(limit int) ([]*Task, error) {
 }
 
 func SearchTask(search string, limit int) ([]*Task, error) {
-	if limit > 50 {
+	if limit > LimitCount {
 		logger.L().Info("The limit cannot be more than 50")
-		limit = 50
+		limit = LimitCount
 	}
 	if t, err := time.Parse("02.01.2006", search); err == nil {
-		date := t.Format("20060102")
+		date := t.Format(TimeDateFormat)
 		tasks, err := searchDate(date, limit)
 		if err != nil {
 			logger.L().Errorf("Date search error: %v", err)

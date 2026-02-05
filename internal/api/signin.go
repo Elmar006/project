@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"os"
 )
 
 func signinHandler(w http.ResponseWriter, r *http.Request) {
@@ -25,9 +24,7 @@ func signinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	envPass := os.Getenv("TODO_PASSWORD")
-
-	if data.Password != envPass {
+	if data.Password != todoPassword {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -36,7 +33,7 @@ func signinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := generateToken(envPass)
+	token, err := generateToken(todoPassword)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)

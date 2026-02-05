@@ -18,7 +18,7 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 	search := r.URL.Query().Get("search")
 	if search == "" {
 
-		tasks, err := db.GetTasks(50)
+		tasks, err := db.GetTasks(db.LimitCount)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -35,7 +35,7 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 
-		tasks, err := db.SearchTask(search, 50)
+		tasks, err := db.SearchTask(search, db.LimitCount)
 		if err != nil {
 			logger.L().Errorf("Error when searching through Query data: %v", err)
 			http.Error(w, "Error when searching through Query data", http.StatusInternalServerError)
@@ -92,15 +92,15 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if task.Date == "" {
-		task.Date = time.Now().Format("20060102")
+		task.Date = time.Now().Format(db.TimeDateFormat)
 	}
-	if _, err := time.Parse("20060102", task.Date); err != nil {
+	if _, err := time.Parse(db.TimeDateFormat, task.Date); err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid date format")
 		return
 	}
 
 	now := time.Now()
-	t, _ := time.Parse("20060102", task.Date)
+	t, _ := time.Parse(db.TimeDateFormat, task.Date)
 	nowNorm := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	tNorm := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 
@@ -113,7 +113,7 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			task.Date = next
 		} else {
-			task.Date = now.Format("20060102")
+			task.Date = now.Format(db.TimeDateFormat)
 		}
 	}
 
@@ -129,6 +129,10 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func doneTaskHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		writeError(w, http.StatusBadRequest, "Task ID required")

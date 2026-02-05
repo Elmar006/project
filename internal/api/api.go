@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 	"time"
+
+	"github.com/Elmar006/project/internal/db"
 )
 
 func Init() {
@@ -34,7 +36,7 @@ func nextDateHandler(w http.ResponseWriter, r *http.Request) {
 	dateStr := r.URL.Query().Get("date")
 	repeat := r.URL.Query().Get("repeat")
 
-	_, err := time.Parse("20060102", dateStr)
+	_, err := time.Parse(db.TimeDateFormat, dateStr)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid date format, expected YYYYMMDD")
 		return
@@ -43,7 +45,7 @@ func nextDateHandler(w http.ResponseWriter, r *http.Request) {
 	if nowStr == "" {
 		nowDate = time.Now()
 	} else {
-		nowDate, err = time.Parse("20060102", nowStr)
+		nowDate, err = time.Parse(db.TimeDateFormat, nowStr)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "Invalid now format, expected YYYYMMDD")
 			return

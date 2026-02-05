@@ -26,9 +26,7 @@ jobs:
 
     - name: Run local server
       run: |
-        cd cmd
-        CGO_ENABLED=0 GOOS=linux go run main.go &
-        cd ..
+        CGO_ENABLED=0 GOOS=linux go run cmd/main.go &
         sleep 100
         go test -run ^TestApp$ ./tests
         

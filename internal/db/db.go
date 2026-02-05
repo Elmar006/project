@@ -31,10 +31,18 @@ func Init(dbFile string) error {
 		logger.L().Errorf("Ошибка при открытии БД: %v", err)
 		return err
 	}
+
 	if err := db.Ping(); err != nil {
 		logger.L().Errorf("Не удалось подключится к БД: %v", err)
 		return err
 	}
+
+	defer func() {
+		if err != nil {
+			_ = db.Close()
+		}
+	}()
+
 	if instal == true {
 		_, err := db.Exec(schema)
 		if err != nil {
